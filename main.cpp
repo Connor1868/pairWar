@@ -166,8 +166,36 @@ void *dealer_Thread(void *arg){
     pthread_exit(NULL);
 }
 
-void *player_Thread(void *arg){
+void *player_Thread(void *playerNum){
+    long pNum = (long) playerNum;
+    hand currentHand;
     
+    if(roundNum == 1){
+        if(pNum == 1) currentHand = hand1;
+        else if (pNum == 2) currentHand = hand2;
+        else currentHand = hand3;
+    }else if( roundNum == 2){
+        if(pNum == 2) currentHand = hand1;
+        else if ((long)playerNum == 3) currentHand = hand2;
+        else currentHand = hand3;
+    }else if( roundNum == 3){
+        if(pNum == 3) currentHand = hand1;
+        else if (pNum == 1) currentHand = hand2;
+        else currentHand = hand3;
+    }
+    
+    while(win == 0){
+        pthread_mutex_lock(&mutex_useDeck);
+        while(pNum != turn && win == 0){
+            pthread_cond_wait(&cond_var, &mutex_useDeck);
+        }
+        if (win == 0){
+            deckDealer(pNum, currentHand);
+        }
+        pthread_mutex_unlock(&mutex_useDeck);
+    }
+    cout << "PLAYER " << pNum << ": exits round" << endl;
+    pthread_exit(NULL);
 }
 
 void deckDealer(long playerNum, hand currentHand){
