@@ -69,11 +69,12 @@ void round();
 
 //Main
 int main(int argc, const char * argv[]) {
+    logFile = freopen("pairWarOutput.txt","w", stdout);   //Create the log file
+
     cout << "Welcome to Pair War" << endl;
     cout << "See Log File" << endl;
     srand(time(NULL));
-    logFile = freopen("pairWarOutput.txt","w", stdout);   //Create the log file
-    cout << "----Pair War Log File Start----" << endl;
+    cout << "----Start----" << endl;
     deckBuild();
     deckShuffle();
     
@@ -83,9 +84,9 @@ int main(int argc, const char * argv[]) {
         win = false;
     }
 
-    fprintf(logFile,"----Pair War Log File End----\n");
+    fprintf(logFile,"----End----\n");
     fclose(logFile);
-    return 0;
+    exit(EXIT_SUCCESS);
 }
 
 void deckBuild(){
