@@ -59,7 +59,7 @@ hand hand1, hand2, hand3;
 
 //Function Definitions
 void *dealer_Thread(void *arg);
-void *player_Thread(void *arg);
+void *player_Threads(void *arg);
 void deckBuild();
 void deckShuffle();
 void deckDeal();
@@ -73,7 +73,7 @@ int main(int argc, const char * argv[]) {
     cout << "See Log File" << endl;
     srand(time(NULL));
     logFile = freopen("pairWarOutput.txt","w", stdout);   //Create the log file
-    fprintf(logFile,"----Pair War Log File Start----");
+    cout << "----Pair War Log File Start----" << endl;
     deckBuild();
     deckShuffle();
     
@@ -83,13 +83,13 @@ int main(int argc, const char * argv[]) {
         win = false;
     }
 
-    fprintf(logFile,"----Pair War Log File End----");
+    fprintf(logFile,"----Pair War Log File End----\n");
     fclose(logFile);
     return 0;
 }
 
 void deckBuild(){
-    cout << "buidling deck..." << endl;
+    cout << "building deck..." << endl;
     
     int card = 0;
     for (int i = 0; i < 4; i++){
@@ -98,8 +98,8 @@ void deckBuild(){
             card++;
         }
     }
-    deckTop = &deck[0];
-    deckBottom = &deck[51];
+    deckTop = deck;
+    deckBottom = deck + 51;
 }
 
 void deckShuffle(){
@@ -114,8 +114,10 @@ void deckShuffle(){
 void deckDeal(){
     hand1.card1 = *deckTop;
     deckTop = deckTop + 1;
+    
     hand2.card1 = *deckTop;
     deckTop = deckTop + 1;
+    
     hand3.card1 = *deckTop;
     deckTop = deckTop + 1;
 }
@@ -131,12 +133,12 @@ void deckPrint(){
 }
 
 void round(){
-    cout << "Begining Round..." << endl;
+    cout << endl << "Beginning Round" << endl;
     
-    int dealer = pthread_create(&dealerThread,NULL,&dealer_Thread,NULL);     //Create dealer thread
+    pthread_create(&dealerThread,NULL,&dealer_Thread,NULL);     //Create dealer thread
     int player;
-    for (long i = 0; i < 3; i++){
-        pthread_create(&playerThreads[i], NULL, &player_Thread, (void *)i);
+    for (long i = 1; i <= 3; i++){
+        player = pthread_create(&playerThreads[i], NULL, &player_Threads, (void *)i);
     }
     
     pthread_join(dealerThread, NULL);
@@ -147,10 +149,10 @@ void round(){
 }
 
 void *dealer_Thread(void *arg){
-    int playerNum = 0;
+    int pNum = 0;   //Dealers number
     turn = 0;
     hand dealerHand;
-    deckDealer(playerNum, dealerHand);
+    deckDealer(pNum, dealerHand);
     
     pthread_mutex_lock(&mutex_dealerExit);
     while(!win){
@@ -161,19 +163,24 @@ void *dealer_Thread(void *arg){
     pthread_exit(NULL);
 }
 
-void *player_Thread(void *playerNum){
+void *player_Threads(void *playerNum){
     long pNum = (long) playerNum;
     hand currentHand;
     
     if(roundNum == 1){
+        
         if(pNum == 1) currentHand = hand1;
         else if (pNum == 2) currentHand = hand2;
         else currentHand = hand3;
+        
     }else if( roundNum == 2){
+        
         if(pNum == 2) currentHand = hand1;
-        else if ((long)playerNum == 3) currentHand = hand2;
+        else if (pNum == 3) currentHand = hand2;
         else currentHand = hand3;
+        
     }else if( roundNum == 3){
+        
         if(pNum == 3) currentHand = hand1;
         else if (pNum == 1) currentHand = hand2;
         else currentHand = hand3;
@@ -193,22 +200,23 @@ void *player_Thread(void *playerNum){
     pthread_exit(NULL);
 }
 
-void deckDealer(long playerNum, hand currentHand){
-    if (playerNum == 0){    //Dealers turn
+void deckDealer(long pNum, hand currentHand){
+    if (pNum == 0){    //Dealers turn
         cout << "DEALER: shuffle deck" << endl;
         deckShuffle();
         cout << "DEALER: deal cards" << endl;
         deckDeal();
     }else{  //Players turn
-        cout << "PLAYER " << playerNum << ": hand " << currentHand.card1 << endl;   //Show the players hand
         
-        currentHand.card2 = *deckTop;
-        deckTop = deckTop + 1;
-        cout << "PLAYER " << playerNum << ": draws " << currentHand.card2 << endl;   //Player draws a card
+        cout << "PLAYER " << pNum << ": hand " << currentHand.card1 << endl;   //Show the players hand
         
-        cout << "PLAYER " << playerNum << ": hand " << currentHand.card1 << currentHand.card2 << endl;   //Show the players hand
+        currentHand.card2 = *deckTop;   //Draw a card
+        deckTop = deckTop + 1;          //Set new top of deck card
+        cout << "PLAYER " << pNum << ": draws " << currentHand.card2 << endl;   //Player draws a card
         
-        if(currentHand.card1 == currentHand.card1){
+        cout << "PLAYER " << pNum << ": hand " << currentHand.card1 << " " << currentHand.card2 << endl;   //Show the players hand
+        
+        if(currentHand.card1 == currentHand.card2){
             //Cards match, delare the winner
             cout << "WIN yes" << endl;
             win = true;
@@ -226,11 +234,11 @@ void deckDealer(long playerNum, hand currentHand){
             
             int discard = rand()%2;
             if (discard == 0){
-                cout << "PLAYER " << playerNum << "discards " << currentHand.card1 << endl;
+                cout << "PLAYER " << pNum << " discards " << currentHand.card1 << endl;
                 *deckBottom = currentHand.card1;
                 currentHand.card1 = currentHand.card2;
             }else{
-                cout << "PLAYER " << playerNum << "discards " << currentHand.card2 << endl;
+                cout << "PLAYER " << pNum << " discards " << currentHand.card2 << endl;
                 *deckBottom = currentHand.card2;
             }
             deckPrint();
