@@ -69,7 +69,7 @@ void round();
 
 //Main
 int main(int argc, const char * argv[]) {
-    logFile = freopen("pairWarOutput.txt","w", stdout);   //Create the log file
+    logFile = fopen("pairWarOutput.txt","w");   //Create the log file
 
     cout << "Welcome to Pair War" << endl;
     cout << "See Log File" << endl;
