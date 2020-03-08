@@ -65,7 +65,7 @@ void deckShuffle();
 void deckDeal();
 void deckPrint();
 void deckDealer(long, hand);
-//void round();
+void round();
 
 //Main
 int main(int argc, const char * argv[]) {
@@ -73,18 +73,17 @@ int main(int argc, const char * argv[]) {
     cout << "See Log File" << endl;
     srand(time(NULL));
     logFile = freopen("pairWarOutput.txt","w", stdout);   //Create the log file
+    fprintf(logFile,"----Pair War Log File Start----");
     deckBuild();
     deckShuffle();
     
     while (roundNum < 4){
-        //round();
+        round();
         roundNum++;
         win = false;
     }
-    
-    
-    
-    fprintf(logFile,"Pair War Log File");
+
+    fprintf(logFile,"----Pair War Log File End----");
     fclose(logFile);
     return 0;
 }
@@ -101,8 +100,6 @@ void deckBuild(){
     }
     deckTop = &deck[0];
     deckBottom = &deck[51];
-    
-    deckPrint();
 }
 
 void deckShuffle(){
@@ -112,8 +109,6 @@ void deckShuffle(){
         deck[x] = deck[randomCard];
         deck[randomCard] = cardHolder;
     }
-    
-    deckPrint();
 }
 
 void deckDeal(){
@@ -136,10 +131,10 @@ void deckPrint(){
 }
 
 void round(){
-    cout << "Beginging Round..." << endl;
+    cout << "Begining Round..." << endl;
     
-    //int dealer = pthread_create(&dealerThread,NULL,&dealer_Thread,NULL);     //Create dealer thread
-    //int player;
+    int dealer = pthread_create(&dealerThread,NULL,&dealer_Thread,NULL);     //Create dealer thread
+    int player;
     for (long i = 0; i < 3; i++){
         pthread_create(&playerThreads[i], NULL, &player_Thread, (void *)i);
     }
