@@ -28,9 +28,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <fstream>
+#include <time.h>
+
 #define THREAD_NUM 4
 
 using namespace std;
+
+//Threads
+pthread_t playerThreads[3];
+pthread_t dealerThread;
+pthread_cond_t cond_win = PTHREAD_COND_INITIALIZER;
+pthread_cond_t cond_var = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t mutex_dealerExit = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_useDeck = PTHREAD_MUTEX_INITIALIZER;
+
 
 //Varible Definitions
 FILE *logFile;
@@ -52,24 +63,21 @@ void *player_Thread(void *arg);
 void deckBuild();
 void deckShuffle();
 void deckDeal();
+void deckPrint();
 void deckDealer(long, hand);
-void round();
-
-
-
-pthread_t playerThreads[3];
-pthread_t dealerThread;
+//void round();
 
 //Main
 int main(int argc, const char * argv[]) {
     cout << "Welcome to Pair War" << endl;
     cout << "See Log File" << endl;
+    srand(time(NULL));
     logFile = freopen("pairWarOutput.txt","w", stdout);   //Create the log file
     deckBuild();
     deckShuffle();
     
     while (roundNum < 4){
-        round();
+        //round();
         roundNum++;
         win = false;
     }
@@ -94,14 +102,7 @@ void deckBuild(){
     deckTop = &deck[0];
     deckBottom = &deck[51];
     
-    std::cout << "Card deck: ";
-    for (int j = 0; j < 52; j++){
-        if (j == 51){
-            cout << deck[j] << endl;
-        }else{
-            cout << deck[j] << ", ";
-        }
-    }
+    deckPrint();
 }
 
 void deckShuffle(){
@@ -112,26 +113,33 @@ void deckShuffle(){
         deck[randomCard] = cardHolder;
     }
     
-    std::cout << "Shuffled card deck: ";
-    for (int j = 0; j < 52; j++){
-        if (j == 51){
-            cout << deck[j] << endl;
-        }else{
-            cout << deck[j] << ", ";
-        }
-    }
-
+    deckPrint();
 }
 
 void deckDeal(){
-    
+    hand1.card1 = *deckTop;
+    deckTop = deckTop + 1;
+    hand2.card1 = *deckTop;
+    deckTop = deckTop + 1;
+    hand3.card1 = *deckTop;
+    deckTop = deckTop + 1;
+}
+
+void deckPrint(){
+    cout << "DECK: ";
+    int *ptr = deckTop;
+    while (ptr != deckBottom){
+        cout << *ptr << " ";
+        ptr++;
+    }
+    cout << *ptr << endl;
 }
 
 void round(){
     cout << "Beginging Round..." << endl;
     
-    int dealer = pthread_create(&dealerThread,NULL,&dealer_Thread,NULL);     //Create dealer thread
-    int player;
+    //int dealer = pthread_create(&dealerThread,NULL,&dealer_Thread,NULL);     //Create dealer thread
+    //int player;
     for (long i = 0; i < 3; i++){
         pthread_create(&playerThreads[i], NULL, &player_Thread, (void *)i);
     }
@@ -148,6 +156,14 @@ void *dealer_Thread(void *arg){
     turn = 0;
     hand dealerHand;
     deckDealer(playerNum, dealerHand);
+    
+    pthread_mutex_lock(&mutex_dealerExit);
+    while(!win){
+        pthread_cond_wait(&cond_win, &mutex_dealerExit);
+    }
+    pthread_mutex_unlock(&mutex_dealerExit);
+    cout << "DEALER: exits round" << endl;
+    pthread_exit(NULL);
 }
 
 void *player_Thread(void *arg){
@@ -155,12 +171,53 @@ void *player_Thread(void *arg){
 }
 
 void deckDealer(long playerNum, hand currentHand){
-    if (playerNum == 0){    //First hand
+    if (playerNum == 0){    //Dealers turn
         cout << "DEALER: shuffle deck" << endl;
         deckShuffle();
         cout << "DEALER: deal cards" << endl;
         deckDeal();
+    }else{  //Players turn
+        cout << "PLAYER " << playerNum << ": hand " << currentHand.card1 << endl;   //Show the players hand
+        
+        currentHand.card2 = *deckTop;
+        deckTop = deckTop + 1;
+        cout << "PLAYER " << playerNum << ": draws " << currentHand.card2 << endl;   //Player draws a card
+        
+        cout << "PLAYER " << playerNum << ": hand " << currentHand.card1 << currentHand.card2 << endl;   //Show the players hand
+        
+        if(currentHand.card1 == currentHand.card1){
+            //Cards match, delare the winner
+            cout << "WIN yes" << endl;
+            win = true;
+            pthread_cond_signal(&cond_win); //TODO: check cond_signal names
+        }else{
+            //Card don't match, discard the cards
+            cout << "WIN no" << endl;
+            
+            deckTop = deckTop - 1;
+            int *ptr = deckTop;
+            while (ptr != deckBottom){
+                *ptr = *(ptr + 1);
+                ptr = ptr + 1;
+            }
+            
+            int discard = rand()%2;
+            if (discard == 0){
+                cout << "PLAYER " << playerNum << "discards " << currentHand.card1 << endl;
+                *deckBottom = currentHand.card1;
+                currentHand.card1 = currentHand.card2;
+            }else{
+                cout << "PLAYER " << playerNum << "discards " << currentHand.card2 << endl;
+                *deckBottom = currentHand.card2;
+            }
+            deckPrint();
+        }
     }
+    turn ++;
+    if(turn > 3){
+        turn = 1;
+    }
+    pthread_cond_broadcast(&cond_var);
 }
 
 
