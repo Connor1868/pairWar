@@ -32,22 +32,32 @@
 
 using namespace std;
 
-//Function Definitions
-void *dealerThread();
-void *plyaerThread();
-void deckBuild();
-void deckShuffle();
-void round();
-
 //Varible Definitions
 FILE *logFile;
 int deck[52];
-int deckTop;
-int deckBottom;
+int *deckTop;
+int *deckBottom;
 int roundNum;
 bool win = false;
+int turn = 0;
 
-pthread_t playerThread[3];
+struct hand{
+    int card1, card2;
+};
+hand hand1, hand2, hand3;
+
+//Function Definitions
+void *dealer_Thread(void *arg);
+void *player_Thread(void *arg);
+void deckBuild();
+void deckShuffle();
+void deckDeal();
+void deckDealer(long, hand);
+void round();
+
+
+
+pthread_t playerThreads[3];
 pthread_t dealerThread;
 
 //Main
@@ -56,6 +66,7 @@ int main(int argc, const char * argv[]) {
     cout << "See Log File" << endl;
     logFile = freopen("pairWarOutput.txt","w", stdout);   //Create the log file
     deckBuild();
+    deckShuffle();
     
     while (roundNum < 4){
         round();
@@ -80,8 +91,8 @@ void deckBuild(){
             card++;
         }
     }
-    deckTop = deck[0];
-    deckBottom = deck[51];
+    deckTop = &deck[0];
+    deckBottom = &deck[51];
     
     std::cout << "Card deck: ";
     for (int j = 0; j < 52; j++){
@@ -93,10 +104,63 @@ void deckBuild(){
     }
 }
 
+void deckShuffle(){
+    for( int x = 0; x < (52 - 1); x++){
+        int randomCard = x + (rand() % (52 - x));
+        int cardHolder = deck[x];
+        deck[x] = deck[randomCard];
+        deck[randomCard] = cardHolder;
+    }
+    
+    std::cout << "Shuffled card deck: ";
+    for (int j = 0; j < 52; j++){
+        if (j == 51){
+            cout << deck[j] << endl;
+        }else{
+            cout << deck[j] << ", ";
+        }
+    }
+
+}
+
+void deckDeal(){
+    
+}
+
 void round(){
     cout << "Beginging Round..." << endl;
     
-    int dealer = pthread_create(&dealerThread,NULL,&dealerThread,NULL);     //Create dealer thread
+    int dealer = pthread_create(&dealerThread,NULL,&dealer_Thread,NULL);     //Create dealer thread
     int player;
+    for (long i = 0; i < 3; i++){
+        pthread_create(&playerThreads[i], NULL, &player_Thread, (void *)i);
+    }
+    
+    pthread_join(dealerThread, NULL);
+    for( int j = 0; j < 3; j++){
+        pthread_join(playerThreads[j], NULL);
+    }
     
 }
+
+void *dealer_Thread(void *arg){
+    int playerNum = 0;
+    turn = 0;
+    hand dealerHand;
+    deckDealer(playerNum, dealerHand);
+}
+
+void *player_Thread(void *arg){
+    
+}
+
+void deckDealer(long playerNum, hand currentHand){
+    if (playerNum == 0){    //First hand
+        cout << "DEALER: shuffle deck" << endl;
+        deckShuffle();
+        cout << "DEALER: deal cards" << endl;
+        deckDeal();
+    }
+}
+
+
